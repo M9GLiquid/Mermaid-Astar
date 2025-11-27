@@ -140,7 +140,8 @@ def search(grid, goaltype=None):
         nodes_expanded, path (list of (x,y)) or (nodes_expanded, None)
     """
     start_raw = identify_start(grid)
-    goal_raw = identify_goal(grid, goal_type=goaltype)
+    goal_type = goaltype if isinstance(goaltype, str) else ""
+    goal_raw = identify_goal(grid, goal_type=goal_type)
 
     if start_raw is None or goal_raw is None:
         # Could not find start or goal in the grid
