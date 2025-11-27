@@ -40,7 +40,7 @@ def load_grid():
 
 def test_search_home():
     grid = load_grid()
-    nodes, path = _as.search(grid, "HOME")
+    nodes, path, _, _ = _as.search(grid, "HOME")
     assert nodes >= 0
     assert path is not None
     start = identify_start(grid)
@@ -50,7 +50,7 @@ def test_search_home():
 
 def test_search_food():
     grid = load_grid()
-    nodes, path = _as.search(grid, "FOOD")
+    nodes, path, _, _ = _as.search(grid, "FOOD")
     assert nodes >= 0
     assert path is not None
 

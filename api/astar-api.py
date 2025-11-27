@@ -42,7 +42,7 @@ class PriorityQueue:
         return heapq.heappop(self.elements)[1]
 
 
-def is_free_for_robot(center: Tuple[int, int], grid: List[List[int]], robot_radius: int = 1) -> bool:
+def _is_free_for_robot(center: Tuple[int, int], grid: List[List[int]], robot_radius: int = 1) -> bool:
     """Check if a (2*radius+1)x(2*radius+1) robot fits with its center at 'center'."""
     x, y = center
     rows, cols = len(grid), len(grid[0])
@@ -57,30 +57,30 @@ def is_free_for_robot(center: Tuple[int, int], grid: List[List[int]], robot_radi
     return True
 
 
-def heuristic(a: Tuple[int, int], b: Tuple[int, int]) -> float:
+def _heuristic(a: Tuple[int, int], b: Tuple[int, int]) -> float:
     """Manhattan distance in (x, y)."""
     ax, ay = a
     bx, by = b
     return abs(ax - bx) + abs(ay - by)
 
 
-def get_neighbors(pos: Tuple[int, int], grid: List[List[int]]) -> Iterable[Tuple[int, int]]:
+def _get_neighbors(pos: Tuple[int, int], grid: List[List[int]]) -> Iterable[Tuple[int, int]]:
     """4-neighbors where the robot fits (3x3)."""
     x, y = pos
     rows, cols = len(grid), len(grid[0])
     moves = [(1, 0), (-1, 0), (0, 1), (0, -1)]
     for dx, dy in moves:
         nx, ny = x + dx, y + dy
-        if 0 <= nx < cols and 0 <= ny < rows and is_free_for_robot((nx, ny), grid, robot_radius=1):
+        if 0 <= nx < cols and 0 <= ny < rows and _is_free_for_robot((nx, ny), grid, robot_radius=1):
             yield (nx, ny)
 
 
-def find_nearest_valid(center: Optional[Tuple[int, int]], grid: List[List[int]], robot_radius: int = 1,
+def _find_nearest_valid(center: Optional[Tuple[int, int]], grid: List[List[int]], robot_radius: int = 1,
                        max_search_radius: Optional[int] = None) -> Optional[Tuple[int, int]]:
     """Find nearest valid center where robot fits; returns None if none found."""
     if center is None:
         return None
-    if is_free_for_robot(center, grid, robot_radius=robot_radius):
+    if _is_free_for_robot(center, grid, robot_radius=robot_radius):
         return center
 
     rows, cols = len(grid), len(grid[0])
@@ -90,7 +90,7 @@ def find_nearest_valid(center: Optional[Tuple[int, int]], grid: List[List[int]],
 
     while q:
         x, y = q.popleft()
-        if is_free_for_robot((x, y), grid, robot_radius=robot_radius):
+        if _is_free_for_robot((x, y), grid, robot_radius=robot_radius):
             return (x, y)
 
         for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
@@ -106,7 +106,7 @@ def find_nearest_valid(center: Optional[Tuple[int, int]], grid: List[List[int]],
     return None
 
 
-def identify_start(grid: List[List[int]]) -> Optional[Tuple[int, int]]:
+def _identify_start(grid: List[List[int]]) -> Optional[Tuple[int, int]]:
     rows = len(grid)
     cols = len(grid[0]) if rows else 0
     for y in range(rows):
@@ -116,7 +116,7 @@ def identify_start(grid: List[List[int]]) -> Optional[Tuple[int, int]]:
     return None
 
 
-def identify_goal(grid: List[List[int]], goal_type: str = "FOOD") -> Optional[Tuple[int, int]]:
+def _identify_goal(grid: List[List[int]], goal_type: str = "FOOD") -> Optional[Tuple[int, int]]:
     rows = len(grid)
     cols = len(grid[0]) if rows else 0
     target_values = HOME_VALUES if goal_type.upper() == "HOME" else FOOD_VALUES
@@ -128,17 +128,21 @@ def identify_goal(grid: List[List[int]], goal_type: str = "FOOD") -> Optional[Tu
 
 
 def search(grid: List[List[int]], goaltype: Optional[str] = None):
-    """A* with 3x3 robot and auto-adjusted start/goal if too close to walls."""
-    start_raw = identify_start(grid)
-    goal_raw = identify_goal(grid, goal_type=goaltype or "")
+    """
+    A* with 3x3 robot and auto-adjusted start/goal if too close to walls.
+
+    Returns: (nodes_expanded, path_deque or None, start, goal)
+    """
+    start_raw = _identify_start(grid)
+    goal_raw = _identify_goal(grid, goal_type=goaltype or "")
 
     if start_raw is None or goal_raw is None:
         return 0, None
 
-    start = find_nearest_valid(start_raw, grid, robot_radius=1)
-    goal = find_nearest_valid(goal_raw, grid, robot_radius=1)
+    start = _find_nearest_valid(start_raw, grid, robot_radius=1)
+    goal = _find_nearest_valid(goal_raw, grid, robot_radius=1)
     if start is None or goal is None:
-        return 0, None
+        return 0, None, start_raw, goal_raw
 
     pq = PriorityQueue()
     pq.add(start, 0)
@@ -157,22 +161,22 @@ def search(grid: List[List[int]], goaltype: Optional[str] = None):
                 path.append(cur)
                 cur = came_from[cur]
             path.reverse()
-            return nodes, deque(path)
+            return nodes, deque(path), start_raw, goal_raw
 
-        for nxt in get_neighbors(current, grid):
+        for nxt in _get_neighbors(current, grid):
             tentative_g = g_score[current] + 1
             if nxt not in g_score or tentative_g < g_score[nxt]:
                 g_score[nxt] = tentative_g
-                f_score = tentative_g + heuristic(nxt, goal)
+                f_score = tentative_g + _heuristic(nxt, goal)
                 came_from[nxt] = current
                 pq.add(nxt, f_score)
 
-    return nodes, None
+    return nodes, None, start_raw, goal_raw
 
 
 # ---------------- Actions ----------------
 
-def desired_direction(a: Tuple[int, int], b: Tuple[int, int]) -> str:
+def _desired_direction(a: Tuple[int, int], b: Tuple[int, int]) -> str:
     dx, dy = b[0] - a[0], b[1] - a[1]
     d = VECT_DIR.get((dx, dy))
     if d is None:
@@ -180,7 +184,7 @@ def desired_direction(a: Tuple[int, int], b: Tuple[int, int]) -> str:
     return d
 
 
-def turns_needed(curr: str, target: str):
+def _turns_needed(curr: str, target: str):
     if curr == target:
         return []
     if TURN_RIGHT[curr] == target:
@@ -200,8 +204,8 @@ def next_action_from_path(path: List[Tuple[int, int]], init_heading: str = "N", 
         return ("STOP", None), init_heading
 
     curr, nxt = path[0], path[1]
-    need_dir = desired_direction(curr, nxt)
-    need = turns_needed(init_heading, need_dir)
+    need_dir = _desired_direction(curr, nxt)
+    need = _turns_needed(init_heading, need_dir)
 
     if need == ["AROUND"] and allow_back:
         return ("BACK", 1), init_heading
@@ -260,3 +264,6 @@ def draw_grid(grid: List[List[int]], path, start, goal):
                 row.append(".")
         print(" ".join(row))
     print()
+
+
+__all__ = ["search", "next_action_from_path", "encode_action_ascii", "draw_grid"]

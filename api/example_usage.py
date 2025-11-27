@@ -1,4 +1,3 @@
-import json
 import sys
 from pathlib import Path
 import importlib.util
@@ -19,38 +18,44 @@ spec.loader.exec_module(astar_api)
 
 search = astar_api.search
 draw_grid = astar_api.draw_grid
-identify_start = astar_api.identify_start
-identify_goal = astar_api.identify_goal
 next_action_from_path = astar_api.next_action_from_path
 encode_action_ascii = astar_api.encode_action_ascii
 
 def main():
-    # ---- 1. Load grid.json ----
-    grid_path = THIS_DIR / "grid.json"
-    with open(grid_path, "r", encoding="utf-8") as f:
-        grid = json.load(f)
+    # Inline sample grid (3x3 robot fits; outer bounds are implicit walls)
+    # 0 = free, 1 = wall, 2 = crab/start, 3 = food, 4 = home, 5 = threat
+    grid = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 2, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 5, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 4, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
 
-    print("Loaded grid.json\n")
+    print("Loaded inline grid\n")
     # ---- 2. Choose which goal you want to search for ----
     # Options: "FOOD" or "HOME"
     GOAL_TYPE = "HOME"
 
     # ---- 4. Run A* ----
-    nodes, path = _as.search(grid, GOAL_TYPE)
+    nodes, path, start_raw, goal_raw = search(grid, GOAL_TYPE)
     print(f"Nodes expanded: {nodes}")
 
      # ---- 5. For Visualisation A* ----
-    start = identify_start(grid)
-    print(f"Start position (Crab): {start}")
-    goal = identify_goal(grid, goal_type="HOME")
-    print(f"Goal position: {goal}\n")
+    print(f"Start position (Crab): {start_raw}")
+    print(f"Goal position: {goal_raw}\n")
 
     if path:
         print("Path found!\n")
-        draw_grid(grid, path, start, goal)
+        draw_grid(grid, path, start_raw, goal_raw)
     else:
         print("No path found.")
-        draw_grid(grid, path, start, goal)
+        draw_grid(grid, path, start_raw, goal_raw)
         exit()
 
     # ---- EXTRA 6. Calculate next action based on path ----
